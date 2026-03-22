@@ -10,7 +10,7 @@
   "created": "2026-03-21",
   "author": "netkeep80",
   "traces_from": ["SR-001"],
-  "traces_to": [],
+  "traces_to": ["FR-007", "FR-008"],
   "implementation_files": [],
   "test_files": [],
   "acceptance_criteria": [
