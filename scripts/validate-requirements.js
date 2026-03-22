@@ -4,7 +4,8 @@
  * @req FR-005, FR-006 — Скрипт валидации требований
  *
  * Валидирует все JSON-файлы требований по схеме и проверяет
- * согласованность трассировки.
+ * согласованность трассировки, направление ссылок, отсутствие циклов,
+ * именование файлов и содержание каталогов.
  *
  * Использование: node scripts/validate-requirements.js
  * Код возврата: 0 если все проверки пройдены, 1 если есть ошибки.
@@ -25,6 +26,46 @@ const TYPE_PREFIX_MAP = {
   nonfunctional: 'NFR',
   constraint: 'CR',
   interface: 'IR',
+};
+
+// Иерархия уровней требований (меньше = выше уровень)
+const TYPE_LEVEL = {
+  business: 0,
+  stakeholder: 1,
+  functional: 2,
+  nonfunctional: 2,
+  constraint: 2,
+  interface: 2,
+};
+
+// Маппинг префикса ID к типу
+const PREFIX_TYPE_MAP = {
+  BR: 'business',
+  SR: 'stakeholder',
+  FR: 'functional',
+  NFR: 'nonfunctional',
+  CR: 'constraint',
+  IR: 'interface',
+};
+
+// Маппинг типа к каталогу
+const TYPE_SUBDIR_MAP = {
+  business: 'business',
+  stakeholder: 'stakeholder',
+  functional: 'functional',
+  nonfunctional: 'nonfunctional',
+  constraint: 'constraints',
+  interface: 'interface',
+};
+
+// Маппинг каталога к допустимым префиксам
+const SUBDIR_PREFIXES = {
+  business: ['BR'],
+  stakeholder: ['SR'],
+  functional: ['FR'],
+  nonfunctional: ['NFR'],
+  constraints: ['CR'],
+  interface: ['IR'],
 };
 
 let errors = 0;
@@ -53,6 +94,53 @@ try {
   process.exit(1);
 }
 
+// Фаза 1: Проверка содержания каталогов (лишние файлы)
+info('Проверка содержания каталогов с требованиями...');
+
+for (const subdir of SUBDIRS) {
+  const dirPath = path.join(REQUIREMENTS_DIR, subdir);
+  if (!fs.existsSync(dirPath)) continue;
+
+  const allowedPrefixes = SUBDIR_PREFIXES[subdir];
+  const allEntries = fs.readdirSync(dirPath);
+
+  for (const entry of allEntries) {
+    const entryPath = path.join(dirPath, entry);
+    const stat = fs.statSync(entryPath);
+
+    if (stat.isDirectory()) {
+      error(`${subdir}/${entry}: В каталоге с требованиями не должно быть подкаталогов`);
+      continue;
+    }
+
+    // Проверка имени файла по паттерну {PREFIX}-{NNN}.json
+    const filePattern = new RegExp(`^(${allowedPrefixes.join('|')})-[0-9]{3}\\.json$`);
+    if (!filePattern.test(entry)) {
+      error(`${subdir}/${entry}: Имя файла не соответствует паттерну '${allowedPrefixes.join('|')}-NNN.json'`);
+    }
+  }
+}
+
+// Проверка каталога schemas
+const schemasDir = path.join(REQUIREMENTS_DIR, 'schemas');
+if (fs.existsSync(schemasDir)) {
+  const schemasEntries = fs.readdirSync(schemasDir);
+  for (const entry of schemasEntries) {
+    if (entry !== 'requirement.schema.json') {
+      error(`schemas/${entry}: В каталоге schemas допускается только файл 'requirement.schema.json'`);
+    }
+  }
+}
+
+// Проверка корневого каталога requirements (только допустимые подкаталоги и README.md)
+const allowedRootEntries = new Set([...SUBDIRS, 'schemas', 'README.md']);
+const rootEntries = fs.readdirSync(REQUIREMENTS_DIR);
+for (const entry of rootEntries) {
+  if (!allowedRootEntries.has(entry)) {
+    error(`requirements/${entry}: Лишний файл или каталог в корне requirements`);
+  }
+}
+
 // Сбор всех файлов требований
 const allRequirements = new Map();
 const allFiles = [];
@@ -70,7 +158,9 @@ for (const subdir of SUBDIRS) {
 
 info(`Найдено ${allFiles.length} файл(ов) требований`);
 
-// Фаза 1: Валидация по схеме (базовая, без внешнего валидатора)
+// Фаза 2: Валидация по схеме (базовая, без внешнего валидатора)
+info('Валидация по схеме...');
+
 for (const { filePath, subdir, file } of allFiles) {
   let req;
   try {
@@ -95,11 +185,25 @@ for (const { filePath, subdir, file } of allFiles) {
       error(`${file}: Невалидный формат ID '${req.id}' (ожидается паттерн: XX-NNN)`);
     }
 
+    // Проверка соответствия имени файла и ID
+    const expectedFileName = `${req.id}.json`;
+    if (file !== expectedFileName) {
+      error(`${file}: Имя файла не совпадает с ID требования '${req.id}' (ожидается '${expectedFileName}')`);
+    }
+
     // Проверка соответствия префикса ID типу
     if (req.type) {
       const expectedPrefix = TYPE_PREFIX_MAP[req.type];
       if (expectedPrefix && !req.id.startsWith(expectedPrefix + '-')) {
         error(`${file}: ID '${req.id}' не соответствует типу '${req.type}' (ожидается префикс '${expectedPrefix}-')`);
+      }
+    }
+
+    // Проверка соответствия каталога и типа
+    if (req.type) {
+      const expectedSubdir = TYPE_SUBDIR_MAP[req.type];
+      if (expectedSubdir && subdir !== expectedSubdir) {
+        error(`${file}: Файл находится в каталоге '${subdir}', а тип требования '${req.type}' (ожидается каталог '${expectedSubdir}')`);
       }
     }
 
@@ -109,6 +213,7 @@ for (const { filePath, subdir, file } of allFiles) {
     } else {
       req._file = file;
       req._filePath = filePath;
+      req._subdir = subdir;
       allRequirements.set(req.id, req);
     }
   }
@@ -147,11 +252,10 @@ for (const { filePath, subdir, file } of allFiles) {
   }
 }
 
-// Фаза 2: Валидация трассировки
+// Фаза 3: Валидация трассировки — существование ссылок
 info('Проверка ссылок трассировки...');
 
 for (const [id, req] of allRequirements) {
-  // Проверка существования ссылок traces_from
   if (Array.isArray(req.traces_from)) {
     for (const refId of req.traces_from) {
       if (!allRequirements.has(refId)) {
@@ -160,7 +264,6 @@ for (const [id, req] of allRequirements) {
     }
   }
 
-  // Проверка существования ссылок traces_to
   if (Array.isArray(req.traces_to)) {
     for (const refId of req.traces_to) {
       if (!allRequirements.has(refId)) {
@@ -170,7 +273,113 @@ for (const [id, req] of allRequirements) {
   }
 }
 
-// Фаза 3: Согласованность двунаправленной трассировки
+// Фаза 4: Запрет ссылки на себя
+info('Проверка отсутствия ссылок на себя...');
+
+for (const [id, req] of allRequirements) {
+  if (Array.isArray(req.traces_from) && req.traces_from.includes(id)) {
+    error(`${req._file}: '${id}' содержит ссылку на себя в traces_from`);
+  }
+  if (Array.isArray(req.traces_to) && req.traces_to.includes(id)) {
+    error(`${req._file}: '${id}' содержит ссылку на себя в traces_to`);
+  }
+}
+
+// Фаза 5: Проверка направления трассировки
+info('Проверка направления трассировки...');
+
+function getTypeFromId(reqId) {
+  const prefix = reqId.replace(/-[0-9]{3}$/, '');
+  return PREFIX_TYPE_MAP[prefix];
+}
+
+function getLevelFromId(reqId) {
+  const type = getTypeFromId(reqId);
+  return type !== undefined ? TYPE_LEVEL[type] : undefined;
+}
+
+for (const [id, req] of allRequirements) {
+  const sourceLevel = getLevelFromId(id);
+  if (sourceLevel === undefined) continue;
+
+  // traces_to: прямая ссылка допускается только на тот же или более низкий уровень
+  if (Array.isArray(req.traces_to)) {
+    for (const refId of req.traces_to) {
+      const targetLevel = getLevelFromId(refId);
+      if (targetLevel === undefined) continue;
+      if (targetLevel < sourceLevel) {
+        error(`${req._file}: '${id}' (уровень ${sourceLevel}) содержит traces_to на вышестоящее требование '${refId}' (уровень ${targetLevel}). Прямая ссылка на вышестоящие требования запрещена`);
+      }
+    }
+  }
+
+  // traces_from: обратная ссылка допускается только на тот же или более высокий уровень
+  if (Array.isArray(req.traces_from)) {
+    for (const refId of req.traces_from) {
+      const targetLevel = getLevelFromId(refId);
+      if (targetLevel === undefined) continue;
+      if (targetLevel > sourceLevel) {
+        error(`${req._file}: '${id}' (уровень ${sourceLevel}) содержит traces_from на нижестоящее требование '${refId}' (уровень ${targetLevel}). Обратная ссылка на нижестоящие требования запрещена`);
+      }
+    }
+  }
+}
+
+// Фаза 6: Обнаружение циклических ссылок
+info('Проверка отсутствия циклических ссылок...');
+
+function detectCycles(requirements) {
+  const WHITE = 0; // не посещён
+  const GRAY = 1;  // в процессе обхода
+  const BLACK = 2; // полностью обработан
+
+  const color = new Map();
+  const parent = new Map();
+  const cycles = [];
+
+  for (const id of requirements.keys()) {
+    color.set(id, WHITE);
+  }
+
+  function dfs(nodeId, pathStack) {
+    color.set(nodeId, GRAY);
+    pathStack.push(nodeId);
+
+    const req = requirements.get(nodeId);
+    const neighbors = Array.isArray(req.traces_to) ? req.traces_to : [];
+
+    for (const neighborId of neighbors) {
+      if (!requirements.has(neighborId)) continue;
+
+      if (color.get(neighborId) === GRAY) {
+        // Найден цикл — извлечь путь
+        const cycleStart = pathStack.indexOf(neighborId);
+        const cyclePath = pathStack.slice(cycleStart).concat(neighborId);
+        cycles.push(cyclePath);
+      } else if (color.get(neighborId) === WHITE) {
+        dfs(neighborId, pathStack);
+      }
+    }
+
+    pathStack.pop();
+    color.set(nodeId, BLACK);
+  }
+
+  for (const id of requirements.keys()) {
+    if (color.get(id) === WHITE) {
+      dfs(id, []);
+    }
+  }
+
+  return cycles;
+}
+
+const cycles = detectCycles(allRequirements);
+for (const cycle of cycles) {
+  error(`Обнаружена циклическая ссылка: ${cycle.join(' → ')}`);
+}
+
+// Фаза 7: Согласованность двунаправленной трассировки
 info('Проверка согласованности двунаправленной трассировки...');
 
 for (const [id, req] of allRequirements) {
@@ -197,7 +406,7 @@ for (const [id, req] of allRequirements) {
   }
 }
 
-// Фаза 4: Проверка существования файлов (только предупреждения)
+// Фаза 8: Проверка существования файлов (только предупреждения)
 info('Проверка ссылок на файлы реализации и тестов...');
 
 const projectRoot = path.join(__dirname, '..');
