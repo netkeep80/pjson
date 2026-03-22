@@ -5,10 +5,14 @@ on:
     paths:
       - 'requirements/**'
       - 'scripts/validate-requirements.js'
+      - 'scripts/validate-docs-headings.js'
+      - 'docs/**'
   pull_request:
     paths:
       - 'requirements/**'
       - 'scripts/validate-requirements.js'
+      - 'scripts/validate-docs-headings.js'
+      - 'docs/**'
 
 jobs:
   validate:
@@ -24,3 +28,6 @@ jobs:
 
       - name: Валидация требований
         run: node scripts/validate-requirements.js
+
+      - name: Валидация трассировки заголовков документации
+        run: node scripts/validate-docs-headings.js
