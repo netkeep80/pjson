@@ -5,7 +5,6 @@ on:
     paths:
       - 'requirements/**'
       - 'scripts/validate-requirements.js'
-      - 'scripts/validate-docs-headings.js'
       - 'scripts/validate-repo-guard-workflow.js'
       - 'docs/**'
       - 'repo-policy.json'
@@ -15,12 +14,14 @@ on:
     paths:
       - 'requirements/**'
       - 'scripts/validate-requirements.js'
-      - 'scripts/validate-docs-headings.js'
       - 'scripts/validate-repo-guard-workflow.js'
       - 'docs/**'
       - 'repo-policy.json'
       - '.github/workflows/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
+
+permissions:
+  contents: read
 
 jobs:
   validate:
@@ -37,8 +38,11 @@ jobs:
       - name: Валидация требований
         run: node scripts/validate-requirements.js
 
-      - name: Валидация трассировки заголовков документации
-        run: node scripts/validate-docs-headings.js
-
       - name: Валидация repo-guard workflow
         run: node scripts/validate-repo-guard-workflow.js
+
+      - name: Валидация repo-guard policy
+        uses: netkeep80/repo-guard@88fdc275cbc9bd835cc20c638d83d832027182c7
+        with:
+          mode: check-diff
+          enforcement: blocking

@@ -67,6 +67,12 @@ function requireArrayIncludes(label, values, expected) {
   }
 }
 
+function requireArrayNotIncludes(label, values, forbidden) {
+  if (Array.isArray(values) && values.includes(forbidden)) {
+    error(`${label}: не должен содержать '${forbidden}'`);
+  }
+}
+
 info('Проверка repo-guard workflow...');
 
 const workflow = readText('.github/workflows/repo-guard.yml');
@@ -177,12 +183,39 @@ if (policy !== null) {
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/PULL_REQUEST_TEMPLATE.md');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/workflows/');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'scripts/validate-repo-guard-workflow.js');
+  requireArrayNotIncludes('repo-policy.json paths.governance_paths', governancePaths, 'scripts/validate-docs-headings.js');
+
+  const anchorTypes = policy.anchors && policy.anchors.types ? policy.anchors.types : {};
+  const anchorTypeIds = Object.keys(anchorTypes);
+  requireArrayIncludes('repo-policy.json anchors.types', anchorTypeIds, 'doc_heading_req_ref');
+  requireArrayIncludes('repo-policy.json anchors.types', anchorTypeIds, 'doc_heading_without_req_ref');
+
+  const headingRefSources = anchorTypes.doc_heading_req_ref && anchorTypes.doc_heading_req_ref.sources;
+  const missingHeadingRefSources = anchorTypes.doc_heading_without_req_ref && anchorTypes.doc_heading_without_req_ref.sources;
+  const headingRefGlobs = Array.isArray(headingRefSources) ? headingRefSources.map(source => source.glob) : [];
+  const missingHeadingRefGlobs = Array.isArray(missingHeadingRefSources) ? missingHeadingRefSources.map(source => source.glob) : [];
+  requireArrayIncludes('repo-policy.json doc_heading_req_ref globs', headingRefGlobs, 'docs/architecture.md');
+  requireArrayIncludes('repo-policy.json doc_heading_req_ref globs', headingRefGlobs, 'docs/pmm_requirements.md');
+  requireArrayIncludes('repo-policy.json doc_heading_without_req_ref globs', missingHeadingRefGlobs, 'docs/architecture.md');
+  requireArrayIncludes('repo-policy.json doc_heading_without_req_ref globs', missingHeadingRefGlobs, 'docs/pmm_requirements.md');
 
   const traceRules = Array.isArray(policy.trace_rules) ? policy.trace_rules : [];
   const ruleIds = traceRules.map(rule => rule.id);
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'code-req-refs-must-resolve');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'doc-req-refs-must-resolve');
+  requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'doc-heading-req-refs-must-resolve');
+  requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'doc-headings-must-have-req-ref');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'declared-affected-anchors-need-evidence');
+
+  const headingRefsRule = traceRules.find(rule => rule.id === 'doc-heading-req-refs-must-resolve');
+  if (!headingRefsRule || headingRefsRule.from_anchor_type !== 'doc_heading_req_ref' || headingRefsRule.to_anchor_type !== 'requirement_id') {
+    error("repo-policy.json: правило doc-heading-req-refs-must-resolve должно разрешать doc_heading_req_ref -> requirement_id");
+  }
+
+  const missingHeadingRefsRule = traceRules.find(rule => rule.id === 'doc-headings-must-have-req-ref');
+  if (!missingHeadingRefsRule || missingHeadingRefsRule.from_anchor_type !== 'doc_heading_without_req_ref' || missingHeadingRefsRule.to_anchor_type !== 'requirement_id') {
+    error("repo-policy.json: правило doc-headings-must-have-req-ref должно разрешать doc_heading_without_req_ref -> requirement_id");
+  }
 
   const declaredAnchorsRule = traceRules.find(rule => rule.id === 'declared-affected-anchors-need-evidence');
   if (!declaredAnchorsRule || declaredAnchorsRule.contract_field !== 'anchors.affects') {
@@ -204,12 +237,14 @@ if (prTemplate !== null) {
 const readme = readText('README.md');
 if (readme !== null) {
   requireContains('README.md', readme, '.github/workflows/repo-guard.yml', 'документация должна упоминать PR workflow repo-guard');
+  requireContains('README.md', readme, 'doc_heading_req_ref', 'документация должна описывать heading anchor types');
+  requireContains('README.md', readme, 'repo-policy.json` является источником истины для трассировки заголовков', 'документация должна называть repo-policy source of truth для заголовков');
   requireContains('README.md', readme, 'anchors.affects', 'документация должна объяснять affected anchors в PR body');
   requireContains('README.md', readme, 'anchors.implements', 'документация должна объяснять implemented anchors в PR body');
   requireContains('README.md', readme, 'anchors.verifies', 'документация должна объяснять verified anchors в PR body');
 }
 
-info('Проверка включения validator в CI...');
+info('Проверка включения repo-guard checks в CI...');
 
 const requirementsWorkflow = readText('.github/workflows/requirements.yml');
 if (requirementsWorkflow !== null) {
@@ -218,6 +253,30 @@ if (requirementsWorkflow !== null) {
     requirementsWorkflow,
     'node scripts/validate-repo-guard-workflow.js',
     'CI должен запускать validate-repo-guard-workflow.js'
+  );
+  requireContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
+    `uses: ${EXPECTED_ACTION}`,
+    `CI должен запускать pinned Action ${EXPECTED_ACTION} для repo-guard policy`
+  );
+  requireContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
+    'mode: check-diff',
+    'CI должен запускать repo-guard в режиме check-diff для repository-wide anchor checks'
+  );
+  requireNotContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
+    'node scripts/validate-docs-headings.js',
+    'CI не должен зависеть от legacy validator заголовков'
+  );
+  requireNotContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
+    'scripts/validate-docs-headings.js',
+    'CI paths не должны зависеть от удалённого legacy validator заголовков'
   );
   requireContains(
     '.github/workflows/requirements.yml',

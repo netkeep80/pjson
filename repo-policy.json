@@ -31,7 +31,6 @@
       "requirements/README.md",
       "requirements/schemas/",
       "scripts/validate-requirements.js",
-      "scripts/validate-docs-headings.js",
       "scripts/validate-repo-guard-workflow.js"
     ],
     "operational_paths": [
@@ -132,6 +131,34 @@
             "pattern": "(?:^|[^A-Z0-9])((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})(?![0-9])"
           }
         ]
+      },
+      "doc_heading_req_ref": {
+        "sources": [
+          {
+            "kind": "regex",
+            "glob": "docs/architecture.md",
+            "pattern": "(?:^|\\n)#{1,6}\\s+[^\\n]*?\\[((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\\]"
+          },
+          {
+            "kind": "regex",
+            "glob": "docs/pmm_requirements.md",
+            "pattern": "(?:^|\\n)#{1,6}\\s+[^\\n]*?\\[((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\\]"
+          }
+        ]
+      },
+      "doc_heading_without_req_ref": {
+        "sources": [
+          {
+            "kind": "regex",
+            "glob": "docs/architecture.md",
+            "pattern": "(?:^|\\n)(#{1,6}\\s+(?![^\\n]*\\[(?:BR|SR|FR|NFR|CR|IR)-[0-9]{3}\\])[^\\n]*)"
+          },
+          {
+            "kind": "regex",
+            "glob": "docs/pmm_requirements.md",
+            "pattern": "(?:^|\\n)(#{1,6}\\s+(?![^\\n]*\\[(?:BR|SR|FR|NFR|CR|IR)-[0-9]{3}\\])[^\\n]*)"
+          }
+        ]
       }
     }
   },
@@ -146,6 +173,18 @@
       "id": "doc-req-refs-must-resolve",
       "kind": "must_resolve",
       "from_anchor_type": "doc_req_ref",
+      "to_anchor_type": "requirement_id"
+    },
+    {
+      "id": "doc-heading-req-refs-must-resolve",
+      "kind": "must_resolve",
+      "from_anchor_type": "doc_heading_req_ref",
+      "to_anchor_type": "requirement_id"
+    },
+    {
+      "id": "doc-headings-must-have-req-ref",
+      "kind": "must_resolve",
+      "from_anchor_type": "doc_heading_without_req_ref",
       "to_anchor_type": "requirement_id"
     },
     {

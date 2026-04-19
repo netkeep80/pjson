@@ -31,4 +31,5 @@ expected_effects:
 ## Test Plan
 
 - [ ] `node scripts/validate-requirements.js`
-- [ ] `node scripts/validate-docs-headings.js`
+- [ ] `node scripts/validate-repo-guard-workflow.js`
+- [ ] `repo-guard --repo-root . check-diff --format summary`
