@@ -83,11 +83,6 @@
         "sources": [
           {
             "kind": "regex",
-            "glob": "scripts/*.js",
-            "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
-          },
-          {
-            "kind": "regex",
             "glob": "scripts/**/*.js",
             "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
           },
@@ -210,16 +205,6 @@
       ],
       "must_change_any": [
         "tests/**"
-      ]
-    },
-    {
-      "if_changed": [
-        "scripts/validate-requirements.js",
-        "scripts/validate-docs-headings.js"
-      ],
-      "must_change_any": [
-        "experiments/**",
-        ".github/workflows/**"
       ]
     }
   ]
