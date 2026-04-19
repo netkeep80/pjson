@@ -183,12 +183,19 @@ if (policy !== null) {
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/PULL_REQUEST_TEMPLATE.md');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/workflows/');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'scripts/validate-repo-guard-workflow.js');
+  requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'docs/requirements-strict-profile.md');
   requireArrayNotIncludes('repo-policy.json paths.governance_paths', governancePaths, 'scripts/validate-docs-headings.js');
 
   const anchorTypes = policy.anchors && policy.anchors.types ? policy.anchors.types : {};
   const anchorTypeIds = Object.keys(anchorTypes);
+  requireArrayIncludes('repo-policy.json anchors.types', anchorTypeIds, 'requirement_json_req_ref');
   requireArrayIncludes('repo-policy.json anchors.types', anchorTypeIds, 'doc_heading_req_ref');
   requireArrayIncludes('repo-policy.json anchors.types', anchorTypeIds, 'doc_heading_without_req_ref');
+
+  const requirementJsonSources = anchorTypes.requirement_json_req_ref && anchorTypes.requirement_json_req_ref.sources;
+  const requirementJsonGlobs = Array.isArray(requirementJsonSources) ? requirementJsonSources.map(source => source.glob) : [];
+  requireArrayIncludes('repo-policy.json requirement_json_req_ref globs', requirementJsonGlobs, 'requirements/business/*.json');
+  requireArrayIncludes('repo-policy.json requirement_json_req_ref globs', requirementJsonGlobs, 'requirements/functional/*.json');
 
   const headingRefSources = anchorTypes.doc_heading_req_ref && anchorTypes.doc_heading_req_ref.sources;
   const missingHeadingRefSources = anchorTypes.doc_heading_without_req_ref && anchorTypes.doc_heading_without_req_ref.sources;
@@ -201,11 +208,19 @@ if (policy !== null) {
 
   const traceRules = Array.isArray(policy.trace_rules) ? policy.trace_rules : [];
   const ruleIds = traceRules.map(rule => rule.id);
+  requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'requirement-json-req-refs-must-resolve');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'code-req-refs-must-resolve');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'doc-req-refs-must-resolve');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'doc-heading-req-refs-must-resolve');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'doc-headings-must-have-req-ref');
   requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'declared-affected-anchors-need-evidence');
+  requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'declared-implemented-anchors-need-evidence');
+  requireArrayIncludes('repo-policy.json trace_rules', ruleIds, 'declared-verified-anchors-need-evidence');
+
+  const requirementJsonRule = traceRules.find(rule => rule.id === 'requirement-json-req-refs-must-resolve');
+  if (!requirementJsonRule || requirementJsonRule.from_anchor_type !== 'requirement_json_req_ref' || requirementJsonRule.to_anchor_type !== 'requirement_id') {
+    error("repo-policy.json: правило requirement-json-req-refs-must-resolve должно разрешать requirement_json_req_ref -> requirement_id");
+  }
 
   const headingRefsRule = traceRules.find(rule => rule.id === 'doc-heading-req-refs-must-resolve');
   if (!headingRefsRule || headingRefsRule.from_anchor_type !== 'doc_heading_req_ref' || headingRefsRule.to_anchor_type !== 'requirement_id') {
@@ -217,9 +232,16 @@ if (policy !== null) {
     error("repo-policy.json: правило doc-headings-must-have-req-ref должно разрешать doc_heading_without_req_ref -> requirement_id");
   }
 
-  const declaredAnchorsRule = traceRules.find(rule => rule.id === 'declared-affected-anchors-need-evidence');
-  if (!declaredAnchorsRule || declaredAnchorsRule.contract_field !== 'anchors.affects') {
-    error("repo-policy.json: правило declared-affected-anchors-need-evidence должно читать contract_field 'anchors.affects'");
+  const declaredAnchorRules = [
+    ['declared-affected-anchors-need-evidence', 'anchors.affects'],
+    ['declared-implemented-anchors-need-evidence', 'anchors.implements'],
+    ['declared-verified-anchors-need-evidence', 'anchors.verifies'],
+  ];
+  for (const [ruleId, contractField] of declaredAnchorRules) {
+    const declaredAnchorsRule = traceRules.find(rule => rule.id === ruleId);
+    if (!declaredAnchorsRule || declaredAnchorsRule.contract_field !== contractField) {
+      error(`repo-policy.json: правило ${ruleId} должно читать contract_field '${contractField}'`);
+    }
   }
 }
 
@@ -237,11 +259,35 @@ if (prTemplate !== null) {
 const readme = readText('README.md');
 if (readme !== null) {
   requireContains('README.md', readme, '.github/workflows/repo-guard.yml', 'документация должна упоминать PR workflow repo-guard');
+  requireContains('README.md', readme, 'requirements-strict', 'документация должна описывать строгий профиль requirements-strict');
   requireContains('README.md', readme, 'doc_heading_req_ref', 'документация должна описывать heading anchor types');
   requireContains('README.md', readme, 'repo-policy.json` является источником истины для трассировки заголовков', 'документация должна называть repo-policy source of truth для заголовков');
   requireContains('README.md', readme, 'anchors.affects', 'документация должна объяснять affected anchors в PR body');
   requireContains('README.md', readme, 'anchors.implements', 'документация должна объяснять implemented anchors в PR body');
   requireContains('README.md', readme, 'anchors.verifies', 'документация должна объяснять verified anchors в PR body');
+}
+
+const strictProfileDoc = readText('docs/requirements-strict-profile.md');
+if (strictProfileDoc !== null) {
+  requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'requirements-strict', 'документ должен называть strict profile');
+  requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'requirement-json-req-refs-must-resolve', 'документ должен описывать перенос JSON trace ref resolution в repo-guard');
+  requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'scripts/validate-requirements.js', 'документ должен описывать оставшийся legacy validator');
+}
+
+const requirementsValidator = readText('scripts/validate-requirements.js');
+if (requirementsValidator !== null) {
+  requireNotContains(
+    'scripts/validate-requirements.js',
+    requirementsValidator,
+    'traces_from ссылается на несуществующее требование',
+    'разрешение JSON trace refs должно выполняться repo-guard, а не legacy validator'
+  );
+  requireNotContains(
+    'scripts/validate-requirements.js',
+    requirementsValidator,
+    'traces_to ссылается на несуществующее требование',
+    'разрешение JSON trace refs должно выполняться repo-guard, а не legacy validator'
+  );
 }
 
 info('Проверка включения repo-guard checks в CI...');
