@@ -85,8 +85,30 @@ node scripts/validate-requirements.js
 node /path/to/repo-guard/src/repo-guard.mjs --repo-root .
 ```
 
+### PR workflow repo-guard
+
+PR-gate находится в [`.github/workflows/repo-guard.yml`](.github/workflows/repo-guard.yml).
+Workflow запускает `repo-guard` в `check-pr` режиме для событий
+`pull_request`, использует `fetch-depth: 0` для корректного diff
+`base...head` и передаёт `GH_TOKEN` для чтения PR body или связанной issue.
+Начальный режим enforcement — `blocking`, потому что `repo-policy.json` уже
+содержит requirements-aware rules, diff budgets и file-level guardrails для
+governance, requirements, docs, scripts и CI изменений.
+Существующий workflow валидации требований остаётся параллельным контролем.
+
 Для PR подготовлен пример change contract в
-[`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md).
+[`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). В PR body
+нужно сохранять блок `repo-guard-yaml` и обновлять его вместе с diff:
+
+- `anchors.affects` — требования, на которые влияет изменение поведения,
+  документации, тестов, скриптов, CI или policy;
+- `anchors.implements` — требования, для которых PR добавляет реализацию;
+- `anchors.verifies` — требования, для которых PR добавляет тест или другой
+  исполняемый check.
+
+Заявленные в `anchors.affects` требования должны сопровождаться evidence-файлом
+из списков `must_touch_any` в `repo-policy.json`; иначе repo-guard покажет
+диагностику в GitHub Actions summary и заблокирует PR.
 
 ## Формат комментариев в исходном коде
 

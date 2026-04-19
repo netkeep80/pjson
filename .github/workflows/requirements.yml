@@ -6,13 +6,21 @@ on:
       - 'requirements/**'
       - 'scripts/validate-requirements.js'
       - 'scripts/validate-docs-headings.js'
+      - 'scripts/validate-repo-guard-workflow.js'
       - 'docs/**'
+      - 'repo-policy.json'
+      - '.github/workflows/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   pull_request:
     paths:
       - 'requirements/**'
       - 'scripts/validate-requirements.js'
       - 'scripts/validate-docs-headings.js'
+      - 'scripts/validate-repo-guard-workflow.js'
       - 'docs/**'
+      - 'repo-policy.json'
+      - '.github/workflows/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
 
 jobs:
   validate:
@@ -31,3 +39,6 @@ jobs:
 
       - name: Валидация трассировки заголовков документации
         run: node scripts/validate-docs-headings.js
+
+      - name: Валидация repo-guard workflow
+        run: node scripts/validate-repo-guard-workflow.js

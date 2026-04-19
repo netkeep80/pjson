@@ -14,8 +14,10 @@ budgets:
   max_new_files: 6
   max_new_docs: 1
   max_net_added_lines: 800
-# Add requirement IDs such as FR-001 when this PR affects, implements,
-# or verifies them.
+# Put requirement IDs such as FR-001 in anchors.affects when the diff changes
+# behavior, docs, tests, scripts, CI, or policy tied to those requirements.
+# Use anchors.implements for new implementation work and anchors.verifies for
+# new tests/checks that verify a requirement.
 anchors:
   affects: []
   implements: []
