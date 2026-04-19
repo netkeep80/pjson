@@ -252,28 +252,7 @@ for (const { filePath, subdir, file } of allFiles) {
   }
 }
 
-// Фаза 3: Валидация трассировки — существование ссылок
-info('Проверка ссылок трассировки...');
-
-for (const [id, req] of allRequirements) {
-  if (Array.isArray(req.traces_from)) {
-    for (const refId of req.traces_from) {
-      if (!allRequirements.has(refId)) {
-        error(`${req._file}: traces_from ссылается на несуществующее требование '${refId}'`);
-      }
-    }
-  }
-
-  if (Array.isArray(req.traces_to)) {
-    for (const refId of req.traces_to) {
-      if (!allRequirements.has(refId)) {
-        error(`${req._file}: traces_to ссылается на несуществующее требование '${refId}'`);
-      }
-    }
-  }
-}
-
-// Фаза 4: Запрет ссылки на себя
+// Фаза 3: Запрет ссылки на себя
 info('Проверка отсутствия ссылок на себя...');
 
 for (const [id, req] of allRequirements) {
@@ -285,7 +264,7 @@ for (const [id, req] of allRequirements) {
   }
 }
 
-// Фаза 5: Проверка направления трассировки
+// Фаза 4: Проверка направления трассировки
 info('Проверка направления трассировки...');
 
 function getTypeFromId(reqId) {
@@ -325,7 +304,7 @@ for (const [id, req] of allRequirements) {
   }
 }
 
-// Фаза 6: Обнаружение циклических ссылок
+// Фаза 5: Обнаружение циклических ссылок
 info('Проверка отсутствия циклических ссылок...');
 
 function detectCycles(requirements) {
@@ -379,7 +358,7 @@ for (const cycle of cycles) {
   error(`Обнаружена циклическая ссылка: ${cycle.join(' → ')}`);
 }
 
-// Фаза 7: Согласованность двунаправленной трассировки
+// Фаза 6: Согласованность двунаправленной трассировки
 info('Проверка согласованности двунаправленной трассировки...');
 
 for (const [id, req] of allRequirements) {
@@ -406,7 +385,7 @@ for (const [id, req] of allRequirements) {
   }
 }
 
-// Фаза 8: Проверка существования файлов (только предупреждения)
+// Фаза 7: Проверка существования файлов (только предупреждения)
 info('Проверка ссылок на файлы реализации и тестов...');
 
 const projectRoot = path.join(__dirname, '..');

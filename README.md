@@ -65,20 +65,31 @@ requirements/
 node scripts/validate-requirements.js
 ```
 
-Проверяет соответствие схеме, согласованность трассировки и ссылки на файлы.
+Проверяет соответствие схеме, структуру каталогов, directionality и graph
+checks для `traces_from` / `traces_to`, а также ссылки на файлы. Разрешение
+ID внутри JSON-файлов требований выполняет `repo-guard` через строгий policy
+profile.
 
 ### Repo-guard policy
 
-В корне репозитория находится `repo-policy.json` — pilot-конфиг для
-[`repo-guard`](https://github.com/netkeep80/repo-guard). Он описывает:
+В корне репозитория находится `repo-policy.json` — expanded downstream
+configuration профиля `requirements-strict` для
+[`repo-guard`](https://github.com/netkeep80/repo-guard). Пока schema
+repo-guard `0.3.0` не поддерживает отдельное поле `profile`, pjson хранит
+профиль как развернутые `anchors` / `trace_rules` плюс repo-local overrides.
+Подробности и migration target описаны в
+[docs/requirements-strict-profile.md](docs/requirements-strict-profile.md).
+Policy описывает:
 
-- anchor types `requirement_id`, `code_req_ref`, `doc_req_ref`,
-  `doc_heading_req_ref`, `doc_heading_without_req_ref`;
-- правила `must_resolve` для ссылок `@req`, документных ссылок на требования
-  и обязательных ссылок на требования в заголовках
+- anchor types `requirement_id`, `requirement_json_req_ref`, `code_req_ref`,
+  `doc_req_ref`, `doc_heading_req_ref`, `doc_heading_without_req_ref`;
+- правила `must_resolve` для JSON trace refs, ссылок `@req`, документных
+  ссылок на требования и обязательных ссылок на требования в заголовках
   `docs/architecture.md` / `docs/pmm_requirements.md`;
 - правило evidence: изменения файлов требований должны сопровождаться
   изменениями в коде, тестах, документации, примерах, скриптах или CI;
+- правила evidence для `anchors.affects`, `anchors.implements` и
+  `anchors.verifies` в PR contract;
 - базовые file-level guardrails для временных файлов, build artifacts и
   co-change правил.
 
@@ -118,8 +129,9 @@ governance, requirements, docs, scripts и CI изменений.
   исполняемый check.
 
 Заявленные в `anchors.affects` требования должны сопровождаться evidence-файлом
-из списков `must_touch_any` в `repo-policy.json`; иначе repo-guard покажет
-диагностику в GitHub Actions summary и заблокирует PR.
+из списков `must_touch_any` в `repo-policy.json`. То же правило действует для
+`anchors.implements` и `anchors.verifies` со своими evidence surfaces; иначе
+repo-guard покажет диагностику в GitHub Actions summary и заблокирует PR.
 
 ## Формат комментариев в исходном коде
 

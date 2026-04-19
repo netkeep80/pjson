@@ -28,6 +28,7 @@
       "repo-policy.json",
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".github/workflows/",
+      "docs/requirements-strict-profile.md",
       "requirements/README.md",
       "requirements/schemas/",
       "scripts/validate-requirements.js",
@@ -76,6 +77,40 @@
             "kind": "json_field",
             "glob": "requirements/interface/*.json",
             "field": "id"
+          }
+        ]
+      },
+      "requirement_json_req_ref": {
+        "sources": [
+          {
+            "kind": "regex",
+            "glob": "requirements/business/*.json",
+            "pattern": "\"((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\""
+          },
+          {
+            "kind": "regex",
+            "glob": "requirements/stakeholder/*.json",
+            "pattern": "\"((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\""
+          },
+          {
+            "kind": "regex",
+            "glob": "requirements/functional/*.json",
+            "pattern": "\"((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\""
+          },
+          {
+            "kind": "regex",
+            "glob": "requirements/nonfunctional/*.json",
+            "pattern": "\"((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\""
+          },
+          {
+            "kind": "regex",
+            "glob": "requirements/constraints/*.json",
+            "pattern": "\"((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\""
+          },
+          {
+            "kind": "regex",
+            "glob": "requirements/interface/*.json",
+            "pattern": "\"((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})\""
           }
         ]
       },
@@ -164,6 +199,12 @@
   },
   "trace_rules": [
     {
+      "id": "requirement-json-req-refs-must-resolve",
+      "kind": "must_resolve",
+      "from_anchor_type": "requirement_json_req_ref",
+      "to_anchor_type": "requirement_id"
+    },
+    {
       "id": "code-req-refs-must-resolve",
       "kind": "must_resolve",
       "from_anchor_type": "code_req_ref",
@@ -223,6 +264,28 @@
         "README.md",
         "requirements/README.md",
         "scripts/**"
+      ]
+    },
+    {
+      "id": "declared-implemented-anchors-need-evidence",
+      "kind": "declared_anchors_require_evidence",
+      "contract_field": "anchors.implements",
+      "must_touch_any": [
+        "include/**",
+        "src/**",
+        "scripts/**",
+        ".github/workflows/**"
+      ]
+    },
+    {
+      "id": "declared-verified-anchors-need-evidence",
+      "kind": "declared_anchors_require_evidence",
+      "contract_field": "anchors.verifies",
+      "must_touch_any": [
+        "tests/**",
+        "experiments/**",
+        "scripts/**",
+        ".github/workflows/**"
       ]
     }
   ],
