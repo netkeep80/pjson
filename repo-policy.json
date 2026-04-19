@@ -1,0 +1,211 @@
+{
+  "policy_format_version": "0.3.0",
+  "repository_kind": "library",
+  "enforcement": {
+    "mode": "blocking"
+  },
+  "paths": {
+    "forbidden": [
+      "*.bak",
+      "**/*.bak",
+      "*.log",
+      "**/*.log",
+      "*.tmp",
+      "**/*.tmp",
+      "build/**",
+      "cmake-build-*/**",
+      "dist/**",
+      "node_modules/**"
+    ],
+    "canonical_docs": [
+      "README.md",
+      "requirements/README.md",
+      "docs/architecture.md",
+      "docs/development-plan.md",
+      "docs/pmm_requirements.md"
+    ],
+    "governance_paths": [
+      "repo-policy.json",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".github/workflows/",
+      "requirements/README.md",
+      "requirements/schemas/",
+      "scripts/validate-requirements.js",
+      "scripts/validate-docs-headings.js"
+    ],
+    "operational_paths": [
+      ".claude/**",
+      ".gitkeep"
+    ]
+  },
+  "diff_rules": {
+    "max_new_docs": 2,
+    "max_new_files": 12,
+    "max_net_added_lines": 1200
+  },
+  "anchors": {
+    "types": {
+      "requirement_id": {
+        "sources": [
+          {
+            "kind": "json_field",
+            "glob": "requirements/business/*.json",
+            "field": "id"
+          },
+          {
+            "kind": "json_field",
+            "glob": "requirements/stakeholder/*.json",
+            "field": "id"
+          },
+          {
+            "kind": "json_field",
+            "glob": "requirements/functional/*.json",
+            "field": "id"
+          },
+          {
+            "kind": "json_field",
+            "glob": "requirements/nonfunctional/*.json",
+            "field": "id"
+          },
+          {
+            "kind": "json_field",
+            "glob": "requirements/constraints/*.json",
+            "field": "id"
+          },
+          {
+            "kind": "json_field",
+            "glob": "requirements/interface/*.json",
+            "field": "id"
+          }
+        ]
+      },
+      "code_req_ref": {
+        "sources": [
+          {
+            "kind": "regex",
+            "glob": "scripts/**/*.js",
+            "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
+          },
+          {
+            "kind": "regex",
+            "glob": "include/**/*.{h,hpp,hh}",
+            "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
+          },
+          {
+            "kind": "regex",
+            "glob": "src/**/*.{h,hpp,hh,c,cc,cpp,cxx}",
+            "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
+          },
+          {
+            "kind": "regex",
+            "glob": "tests/**/*.{h,hpp,hh,c,cc,cpp,cxx,js,mjs}",
+            "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
+          },
+          {
+            "kind": "regex",
+            "glob": "examples/**/*.{h,hpp,hh,c,cc,cpp,cxx,js,mjs}",
+            "pattern": "(?:@req\\s+|,\\s*)((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})"
+          }
+        ]
+      },
+      "doc_req_ref": {
+        "sources": [
+          {
+            "kind": "regex",
+            "glob": "*.md",
+            "pattern": "(?:^|[^A-Z0-9])((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})(?![0-9])"
+          },
+          {
+            "kind": "regex",
+            "glob": "docs/**/*.md",
+            "pattern": "(?:^|[^A-Z0-9])((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})(?![0-9])"
+          },
+          {
+            "kind": "regex",
+            "glob": "requirements/**/*.md",
+            "pattern": "(?:^|[^A-Z0-9])((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})(?![0-9])"
+          },
+          {
+            "kind": "regex",
+            "glob": ".github/**/*.md",
+            "pattern": "(?:^|[^A-Z0-9])((?:BR|SR|FR|NFR|CR|IR)-[0-9]{3})(?![0-9])"
+          }
+        ]
+      }
+    }
+  },
+  "trace_rules": [
+    {
+      "id": "code-req-refs-must-resolve",
+      "kind": "must_resolve",
+      "from_anchor_type": "code_req_ref",
+      "to_anchor_type": "requirement_id"
+    },
+    {
+      "id": "doc-req-refs-must-resolve",
+      "kind": "must_resolve",
+      "from_anchor_type": "doc_req_ref",
+      "to_anchor_type": "requirement_id"
+    },
+    {
+      "id": "changed-requirements-need-evidence",
+      "kind": "changed_files_require_evidence",
+      "if_changed": [
+        "requirements/business/*.json",
+        "requirements/stakeholder/*.json",
+        "requirements/functional/*.json",
+        "requirements/nonfunctional/*.json",
+        "requirements/constraints/*.json",
+        "requirements/interface/*.json"
+      ],
+      "must_touch_any": [
+        "include/**",
+        "src/**",
+        "tests/**",
+        "examples/**",
+        "docs/**",
+        "README.md",
+        "requirements/README.md",
+        "scripts/**",
+        ".github/workflows/**"
+      ]
+    },
+    {
+      "id": "declared-affected-anchors-need-evidence",
+      "kind": "declared_anchors_require_evidence",
+      "contract_field": "anchors.affects",
+      "must_touch_any": [
+        "include/**",
+        "src/**",
+        "tests/**",
+        "examples/**",
+        "docs/**",
+        "README.md",
+        "requirements/README.md",
+        "scripts/**"
+      ]
+    }
+  ],
+  "content_rules": [
+    {
+      "id": "no-todo-without-issue",
+      "glob": "**",
+      "mode": "added_lines",
+      "forbid_regex": [
+        "[T]ODO(?!\\(#\\d+\\))"
+      ]
+    }
+  ],
+  "cochange_rules": [
+    {
+      "if_changed": [
+        "include/**/*.h",
+        "include/**/*.hpp",
+        "src/**/*.{h,hpp,hh,c,cc,cpp,cxx}"
+      ],
+      "must_change_any": [
+        "tests/**"
+      ]
+    }
+  ]
+}

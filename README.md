@@ -67,6 +67,27 @@ node scripts/validate-requirements.js
 
 Проверяет соответствие схеме, согласованность трассировки и ссылки на файлы.
 
+### Repo-guard policy
+
+В корне репозитория находится `repo-policy.json` — pilot-конфиг для
+[`repo-guard`](https://github.com/netkeep80/repo-guard). Он описывает:
+
+- anchor types `requirement_id`, `code_req_ref`, `doc_req_ref`;
+- правила `must_resolve` для ссылок `@req` и документных ссылок на требования;
+- правило evidence: изменения файлов требований должны сопровождаться
+  изменениями в коде, тестах, документации, примерах, скриптах или CI;
+- базовые file-level guardrails для временных файлов, build artifacts и
+  co-change правил.
+
+Проверка policy через локальную копию `repo-guard`:
+
+```bash
+node /path/to/repo-guard/src/repo-guard.mjs --repo-root .
+```
+
+Для PR подготовлен пример change contract в
+[`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md).
+
 ## Формат комментариев в исходном коде
 
 Исходные файлы ссылаются на ID требований с помощью тега `@req`:
