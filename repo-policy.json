@@ -31,7 +31,8 @@
       "requirements/README.md",
       "requirements/schemas/",
       "scripts/validate-requirements.js",
-      "scripts/validate-docs-headings.js"
+      "scripts/validate-docs-headings.js",
+      "scripts/validate-repo-guard-workflow.js"
     ],
     "operational_paths": [
       ".claude/**",
