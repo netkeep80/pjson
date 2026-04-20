@@ -14,10 +14,13 @@ const fs = require('fs');
 const path = require('path');
 
 const PROJECT_ROOT = path.join(__dirname, '..');
-const EXPECTED_ACTION = 'netkeep80/repo-guard@88fdc275cbc9bd835cc20c638d83d832027182c7';
+const EXPECTED_ACTION_REF = '99bf716da62c5d01070aa0d7e4d4f8031b43a351';
+const EXPECTED_ACTION = `netkeep80/repo-guard@${EXPECTED_ACTION_REF}`;
 const EXPECTED_ENFORCEMENT = 'blocking';
 
 let errors = 0;
+let repoGuardWorkflowRefs = [];
+let requirementsWorkflowRefs = [];
 
 function error(msg) {
   console.error(`ОШИБКА: ${msg}`);
@@ -73,6 +76,32 @@ function requireArrayNotIncludes(label, values, forbidden) {
   }
 }
 
+function extractRepoGuardActionRefs(text) {
+  const refs = [];
+  const pattern = /uses:\s+netkeep80\/repo-guard@([^\s#]+)/g;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    refs.push(match[1].replace(/^['"]|['"]$/g, ''));
+  }
+  return refs;
+}
+
+function requireSingleExpectedRepoGuardAction(label, text) {
+  const refs = extractRepoGuardActionRefs(text);
+  if (refs.length !== 1) {
+    error(`${label}: должен быть ровно один uses: ${EXPECTED_ACTION}, найдено ${refs.length}`);
+    return refs;
+  }
+  const ref = refs[0];
+  if (!/^[0-9a-f]{40}$/.test(ref)) {
+    error(`${label}: repo-guard Action должен быть pinned на commit SHA, получено '${ref}'`);
+  }
+  if (ref !== EXPECTED_ACTION_REF) {
+    error(`${label}: repo-guard Action должен использовать ${EXPECTED_ACTION_REF}, получено '${ref}'`);
+  }
+  return refs;
+}
+
 info('Проверка repo-guard workflow...');
 
 const workflow = readText('.github/workflows/repo-guard.yml');
@@ -119,6 +148,7 @@ if (workflow !== null) {
     `uses: ${EXPECTED_ACTION}`,
     `workflow должен использовать pinned Action ${EXPECTED_ACTION}`
   );
+  repoGuardWorkflowRefs = requireSingleExpectedRepoGuardAction('.github/workflows/repo-guard.yml', workflow);
   requireContains(
     '.github/workflows/repo-guard.yml',
     workflow,
@@ -181,7 +211,10 @@ if (policy !== null) {
   const governancePaths = policy.paths && policy.paths.governance_paths;
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'repo-policy.json');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/PULL_REQUEST_TEMPLATE.md');
+  requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/ISSUE_TEMPLATE/change-contract.yml');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, '.github/workflows/');
+  requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'requirements/README.md');
+  requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'requirements/schemas/');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'scripts/validate-repo-guard-workflow.js');
   requireArrayIncludes('repo-policy.json paths.governance_paths', governancePaths, 'docs/requirements-strict-profile.md');
   requireArrayNotIncludes('repo-policy.json paths.governance_paths', governancePaths, 'scripts/validate-docs-headings.js');
@@ -250,10 +283,21 @@ info('Проверка PR template и README...');
 const prTemplate = readText('.github/PULL_REQUEST_TEMPLATE.md');
 if (prTemplate !== null) {
   requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, '```repo-guard-yaml', 'шаблон должен содержать repo-guard YAML block');
+  requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'change intent', 'шаблон должен объяснять, что PR body хранит только change intent');
+  requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'authorized_governance_paths in this PR body is not trusted', 'шаблон должен запрещать доверять governance authorization из PR body');
+  requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'linked issue body', 'шаблон должен направлять governance authorization в linked issue body');
   requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'anchors:', 'шаблон должен содержать секцию anchors');
   requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'affects:', 'шаблон должен позволять объявлять affected anchors');
   requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'implements:', 'шаблон должен позволять объявлять implemented anchors');
   requireContains('.github/PULL_REQUEST_TEMPLATE.md', prTemplate, 'verifies:', 'шаблон должен позволять объявлять verified anchors');
+}
+
+const issueTemplate = readText('.github/ISSUE_TEMPLATE/change-contract.yml');
+if (issueTemplate !== null) {
+  requireContains('.github/ISSUE_TEMPLATE/change-contract.yml', issueTemplate, '```repo-guard-yaml', 'issue form должен содержать repo-guard YAML block');
+  requireContains('.github/ISSUE_TEMPLATE/change-contract.yml', issueTemplate, 'authorized_governance_paths', 'issue form должен документировать privileged authorization field');
+  requireContains('.github/ISSUE_TEMPLATE/change-contract.yml', issueTemplate, 'privileged field', 'issue form должен явно называть authorized_governance_paths privileged field');
+  requireContains('.github/ISSUE_TEMPLATE/change-contract.yml', issueTemplate, 'Only the contract in THIS issue body can unlock policy.paths.governance_paths', 'issue form должен фиксировать trusted issue channel');
 }
 
 const readme = readText('README.md');
@@ -265,6 +309,10 @@ if (readme !== null) {
   requireContains('README.md', readme, 'anchors.affects', 'документация должна объяснять affected anchors в PR body');
   requireContains('README.md', readme, 'anchors.implements', 'документация должна объяснять implemented anchors в PR body');
   requireContains('README.md', readme, 'anchors.verifies', 'документация должна объяснять verified anchors в PR body');
+  requireContains('README.md', readme, 'authorized_governance_paths', 'документация должна описывать issue-sourced governance authorization');
+  requireContains('README.md', readme, 'linked issue body', 'документация должна фиксировать trusted issue channel');
+  requireContains('README.md', readme, 'base branch repo-policy.json', 'документация должна фиксировать trusted base policy boundary');
+  requireContains('README.md', readme, 'fail closed', 'документация должна описывать fail-closed поведение при недоступной trusted boundary');
 }
 
 const strictProfileDoc = readText('docs/requirements-strict-profile.md');
@@ -272,6 +320,9 @@ if (strictProfileDoc !== null) {
   requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'requirements-strict', 'документ должен называть strict profile');
   requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'requirement-json-req-refs-must-resolve', 'документ должен описывать перенос JSON trace ref resolution в repo-guard');
   requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'scripts/validate-requirements.js', 'документ должен описывать оставшийся legacy validator');
+  requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'authorized_governance_paths', 'документ должен описывать issue-sourced governance authorization');
+  requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'trusted base policy', 'документ должен описывать trusted base branch policy boundary');
+  requireContains('docs/requirements-strict-profile.md', strictProfileDoc, 'fail closed', 'документ должен описывать fail-closed behavior');
 }
 
 const requirementsValidator = readText('scripts/validate-requirements.js');
@@ -306,6 +357,7 @@ if (requirementsWorkflow !== null) {
     `uses: ${EXPECTED_ACTION}`,
     `CI должен запускать pinned Action ${EXPECTED_ACTION} для repo-guard policy`
   );
+  requirementsWorkflowRefs = requireSingleExpectedRepoGuardAction('.github/workflows/requirements.yml', requirementsWorkflow);
   requireContains(
     '.github/workflows/requirements.yml',
     requirementsWorkflow,
@@ -339,8 +391,36 @@ if (requirementsWorkflow !== null) {
   requireContains(
     '.github/workflows/requirements.yml',
     requirementsWorkflow,
+    '.github/ISSUE_TEMPLATE/**',
+    'CI должен перезапускаться при изменении issue template'
+  );
+  requireContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
     'repo-policy.json',
     'CI должен перезапускаться при изменении repo-policy.json'
+  );
+  requireNotContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
+    'git clone https://github.com/netkeep80/repo-guard.git',
+    'CI должен использовать pinned Action, а не ручной clone'
+  );
+  requireNotContains(
+    '.github/workflows/requirements.yml',
+    requirementsWorkflow,
+    'node /tmp/repo-guard/src/repo-guard.mjs',
+    'CI не должен запускать временно клонированный CLI напрямую'
+  );
+}
+
+if (
+  repoGuardWorkflowRefs.length === 1 &&
+  requirementsWorkflowRefs.length === 1 &&
+  repoGuardWorkflowRefs[0] !== requirementsWorkflowRefs[0]
+) {
+  error(
+    `.github/workflows/repo-guard.yml и .github/workflows/requirements.yml должны использовать один и тот же repo-guard pin: ${repoGuardWorkflowRefs[0]} != ${requirementsWorkflowRefs[0]}`
   );
 }
 

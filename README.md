@@ -128,6 +128,20 @@ governance, requirements, docs, scripts и CI изменений.
 - `anchors.verifies` — требования, для которых PR добавляет тест или другой
   исполняемый check.
 
+Governance trust model разделяет intent и authorization. PR body остаётся
+каналом change intent: `change_type`, `scope`, `budgets`, `must_touch`,
+`must_not_touch`, `expected_effects` и `anchors.*`. Поле
+`authorized_governance_paths` в PR body игнорируется как untrusted source.
+Governance edits санкционируются только через linked issue body: в issue должен
+быть блок `repo-guard-yaml` с `authorized_governance_paths`, покрывающим
+изменяемые файлы из `paths.governance_paths`.
+
+Для `check-pr` governance boundary читается из base branch repo-policy.json, а
+не из версии policy внутри PR. Если trusted base boundary невозможно прочитать
+или разобрать, gate должен fail closed и не принимать governance decision на
+основе mutable head policy. Requirements-aware anchors, trace rules и evidence
+rules остаются обязательным слоем поверх этой модели доверия.
+
 Заявленные в `anchors.affects` требования должны сопровождаться evidence-файлом
 из списков `must_touch_any` в `repo-policy.json`. То же правило действует для
 `anchors.implements` и `anchors.verifies` со своими evidence surfaces; иначе

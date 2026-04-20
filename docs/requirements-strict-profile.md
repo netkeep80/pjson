@@ -39,6 +39,23 @@ pjson усиливает базовый профиль локальными пр
 | `anchors.verifies` принимают verification evidence в `tests/**`, `experiments/**`, `scripts/**`, `.github/workflows/**` | До появления C++ test tree исполняемые проверки живут в scripts и experiments |
 | Запрещены временные файлы, build outputs, logs и `node_modules/**` | Строгий профиль не должен пропускать operational мусор в PR diff |
 
+## Governance trust model [FR-006](../requirements/functional/FR-006.json)
+
+`requirements-strict` остаётся requirements-aware policy: anchors, trace rules
+и evidence rules не заменяются governance authorization, а выполняются вместе с
+ней. Governance changes добавляют отдельную модель доверия:
+
+- PR body описывает только change intent (`change_type`, `scope`, `budgets`,
+  `must_touch`, `must_not_touch`, `expected_effects`, `anchors.*`);
+- linked issue body является trusted channel для privileged field
+  `authorized_governance_paths`;
+- `authorized_governance_paths` в PR body считается untrusted source и не
+  открывает правку файлов из `paths.governance_paths`;
+- `check-pr` читает `paths.governance_paths` из trusted base policy, то есть из
+  `repo-policy.json` базовой ветки, а не из head policy текущего PR;
+- если trusted base policy нельзя прочитать или распарсить, gate должен
+  fail closed вместо fallback на mutable policy из PR.
+
 ## Оставшиеся bespoke проверки [FR-005](../requirements/functional/FR-005.json)
 
 `scripts/validate-requirements.js` остается нужным для проверок, которые

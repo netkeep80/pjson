@@ -10,6 +10,7 @@ on:
       - 'repo-policy.json'
       - '.github/workflows/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     paths:
       - 'requirements/**'
@@ -19,6 +20,7 @@ on:
       - 'repo-policy.json'
       - '.github/workflows/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/ISSUE_TEMPLATE/**'
 
 permissions:
   contents: read
@@ -42,7 +44,7 @@ jobs:
         run: node scripts/validate-repo-guard-workflow.js
 
       - name: Валидация repo-guard policy
-        uses: netkeep80/repo-guard@88fdc275cbc9bd835cc20c638d83d832027182c7
+        uses: netkeep80/repo-guard@99bf716da62c5d01070aa0d7e4d4f8031b43a351
         with:
           mode: check-diff
           enforcement: blocking
