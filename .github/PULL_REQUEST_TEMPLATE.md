@@ -5,6 +5,8 @@
 ## Change Contract
 
 <!-- Keep this block in the PR body so repo-guard can validate the change. -->
+<!-- PR body stores change intent. authorized_governance_paths in this PR body is not trusted;
+     governance changes must be sanctioned from the linked issue body. -->
 
 ```repo-guard-yaml
 change_type: feature

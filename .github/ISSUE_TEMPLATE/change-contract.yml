@@ -1,0 +1,42 @@
+name: Change contract
+description: Propose a pjson change with a repo-guard change contract.
+title: "[change] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the proposed change and include a YAML change contract block.
+        `authorized_governance_paths` is a privileged field: it belongs in the issue body, not the PR body.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What does this change do and why?
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Change Contract
+      description: Paste a repo-guard YAML change contract block.
+      value: |
+        ```repo-guard-yaml
+        change_type: feature
+        scope:
+          - repo-policy.json
+        budgets: {}
+        anchors:
+          affects: []
+          implements: []
+          verifies: []
+        # Uncomment and list governance files this issue sanctions changing.
+        # Only the contract in THIS issue body can unlock policy.paths.governance_paths.
+        # authorized_governance_paths:
+        #   - repo-policy.json
+        must_touch: []
+        must_not_touch: []
+        expected_effects:
+          - Describe the expected effect
+        ```
+    validations:
+      required: true

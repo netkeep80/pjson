@@ -127,3 +127,8 @@ repo-guard check-diff
 3. Ссылки на требования в Markdown разрешаются
 4. Строгие архитектурные заголовки содержат bracketed requirement link
 5. Измененные требования и declared PR anchors имеют evidence-файлы
+
+Governance-файлы проверяются дополнительным trust model слоем: PR body содержит
+change intent, а `authorized_governance_paths` принимается только из linked
+issue body. В `check-pr` список `paths.governance_paths` читается из policy
+базовой ветки; если эта trusted boundary недоступна, gate должен fail closed.
