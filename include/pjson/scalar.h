@@ -205,15 +205,15 @@ node_ref<Manager> clone_scalar( node_ref<Manager> source ) noexcept
     if ( !type.has_value() || !is_scalar_type( *type ) )
         return {};
 
-    const auto* src = Manager::resolve( source );
-    if ( src == nullptr )
-        return {};
-
+    // allocate_node may expand/remap the arena. Keep only the persistent source
+    // pptr across that operation and resolve both addresses afterwards.
     auto clone = detail::allocate_node<Manager>( *type );
     if ( clone.is_null() )
         return {};
-    auto* dst = Manager::resolve( clone );
-    if ( dst == nullptr )
+
+    const auto* src = Manager::resolve( source );
+    auto*       dst = Manager::resolve( clone );
+    if ( src == nullptr || dst == nullptr )
     {
         detail::deallocate_node<Manager>( clone );
         return {};
