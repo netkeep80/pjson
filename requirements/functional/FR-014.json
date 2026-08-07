@@ -1,12 +1,12 @@
 {
   "id": "FR-014",
   "type": "functional",
-  "title": "Унификация типа AVL-дерева и типа JSON-узла: pptr как динамический тип",
-  "description": "pjson должна использовать тип AVL-дерева (поле node_type в TreeNode pmm) в качестве единственного идентификатора типа JSON-узла, устраняя необходимость в отдельном теге типа (node_tag) внутри структуры узла. pptr становится динамическим типом: его тип определяется не шаблонным параметром compile-time, а полем node_type в TreeNode, в котором этот узел хранится. Таким образом, один и тот же pptr может указывать на узел любого типа pjson, а определение типа происходит через чтение node_type соответствующего TreeNode в runtime. Это существенно экономит персистентное адресное пространство (ПАП), так как устраняется дублирование информации о типе (tag в структуре узла + node_type в TreeNode).",
-  "rationale": "В текущей архитектуре тип JSON-узла хранится в двух местах: (1) в поле node_tag внутри структуры pjson_node и (2) в поле node_type дерева TreeNode в лесе AVL-деревьев pmm (FR-009). Это избыточно — node_type уже однозначно определяет тип узла. Унификация устраняет дублирование, уменьшает размер структуры узла, экономит ПАП и упрощает архитектуру. pptr при этом становится универсальным динамическим указателем: его тип определяется не на этапе компиляции, а по node_type TreeNode в runtime.",
+  "title": "Единый runtime-discriminator JSON-узла через PMM NodeType",
+  "description": "pjson должна определять семантический тип persistent JSON-узла исключительно по application-defined значению NodeType в заголовке блока pmm согласно FR-009. Persistent payload узла не должен содержать второй discriminator (node_tag). Все JSON-узлы используют единый C++ payload/reference слой, а интерпретация payload выбирается в runtime по NodeType за O(1). Шаблонный тип pptr остаётся механизмом типобезопасной адресации pmm; динамической является семантика pjson-узла, а не произвольная подмена C++ типа pptr. Внутренние блоки pstring/parray/pmap имеют собственные встроенные NodeType pmm, но внешний pjson-узел сохраняет свой семантический application-defined NodeType.",
+  "rationale": "Хранение семантического типа одновременно в payload и в PMM block metadata дублирует persistent данные и создаёт риск рассинхронизации. Application-defined NodeType pmm позволяет использовать уже существующее однобайтовое metadata-поле как единственный runtime-discriminator, сохраняя pmm JSON-независимым и не смешивая семантический тип JSON со storage-типом контейнера.",
   "status": "proposed",
   "priority": "critical",
-  "version": "1.0",
+  "version": "1.1",
   "created": "2026-03-22",
   "author": "netkeep80",
   "traces_from": ["BR-002", "FR-002", "FR-009"],
@@ -14,12 +14,13 @@
   "implementation_files": [],
   "test_files": [],
   "acceptance_criteria": [
-    "Тип JSON-узла определяется исключительно через поле node_type в TreeNode pmm, без отдельного тега типа в структуре узла",
-    "pptr является динамическим типом: один и тот же pptr может указывать на узлы разных типов pjson",
-    "Определение типа узла по pptr выполняется через чтение node_type в TreeNode за O(1)",
-    "Структура pjson_node не содержит поля node_tag — тип определяется контекстом дерева",
-    "Экономия ПАП подтверждена: размер структуры узла уменьшен на размер поля тега",
-    "Все операции API (get, put, erase, iterate) корректно работают с динамической типизацией через node_type"
+    "Семантический тип внешнего pjson-узла определяется только через application-defined PMM NodeType согласно FR-009",
+    "Persistent payload pjson-узла не содержит поля node_tag или другого дублирующего discriminator",
+    "Определение семантического типа по persistent reference выполняется за O(1)",
+    "pptr сохраняет compile-time типобезопасность pmm; runtime-полиморфизм реализуется единым payload/reference типом pjson",
+    "Storage-блоки pstring, pstringview, parray и pmap не подменяют семантический NodeType внешнего pjson-узла",
+    "Проверка layout подтверждает отсутствие отдельного persistent type tag",
+    "Операции API интерпретируют payload только после проверки его semantic NodeType"
   ],
-  "tags": ["core", "architecture", "avl-tree", "pptr", "dynamic-type", "optimization"]
+  "tags": ["core", "architecture", "node-type", "pptr", "dynamic-semantics", "optimization"]
 }
