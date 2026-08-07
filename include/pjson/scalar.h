@@ -13,7 +13,9 @@ namespace pjson
 // scalar semantic types of the pjson value model.
 constexpr bool is_scalar_type( node_type type ) noexcept
 {
-    return static_cast<std::uint8_t>( type ) <= static_cast<std::uint8_t>( node_type::real_value );
+    const auto raw = static_cast<std::uint8_t>( type );
+    return raw >= static_cast<std::uint8_t>( node_type::null_value ) &&
+           raw <= static_cast<std::uint8_t>( node_type::real_value );
 }
 
 template <typename Manager>
@@ -75,6 +77,9 @@ bool mutate_scalar( node_ref<Manager> node, node_type target, Writer&& writer ) 
     if ( payload == nullptr )
         return false;
 
+    // Issue #51 tracks a future scoped PMM access primitive for concurrent
+    // relocation safety. Until then this operation requires single-threaded or
+    // externally serialized access to the selected Manager instance.
     writer( *payload );
     return Manager::set_application_node_type( node, to_pmm_node_type( target ) );
 }
