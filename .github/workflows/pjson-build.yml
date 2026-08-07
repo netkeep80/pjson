@@ -1,0 +1,56 @@
+name: pjson C++ build
+
+on:
+  pull_request:
+    paths:
+      - "CMakeLists.txt"
+      - "include/**"
+      - "tests/**"
+      - ".github/workflows/pjson-build.yml"
+  push:
+    branches: [main]
+    paths:
+      - "CMakeLists.txt"
+      - "include/**"
+      - "tests/**"
+      - ".github/workflows/pjson-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC
+            os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+          - name: Linux Clang
+            os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+          - name: Windows MSVC
+            os: windows-latest
+            cc: ""
+            cxx: ""
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DPJSON_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
