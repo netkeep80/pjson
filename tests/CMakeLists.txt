@@ -13,3 +13,7 @@ add_test(NAME pjson.scalar COMMAND pjson_scalar)
 add_executable(pjson_string_binary test_string_binary.cpp)
 target_link_libraries(pjson_string_binary PRIVATE pjson::pjson)
 add_test(NAME pjson.string_binary COMMAND pjson_string_binary)
+
+add_executable(pjson_array test_array.cpp)
+target_link_libraries(pjson_array PRIVATE pjson::pjson)
+add_test(NAME pjson.array COMMAND pjson_array)
