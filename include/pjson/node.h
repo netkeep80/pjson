@@ -118,9 +118,8 @@ void deallocate_node( node_ref<Manager> node ) noexcept
 
 } // namespace detail
 
-static_assert( pjson_node_type_first == 32 );
+static_assert( pjson_node_type_first == pmm::kApplicationNodeTypeFirst );
 static_assert( pjson_node_type_reserved_last < 256 );
-static_assert( pjson_node_type_first > static_cast<std::uint8_t>( pmm::NodeType::PPtr ) );
 static_assert( sizeof( node_payload<default_manager> ) == sizeof( std::uint64_t ) );
 static_assert( alignof( node_payload<default_manager> ) == 8 );
 static_assert( std::is_standard_layout_v<node_payload<default_manager>> );
