@@ -26,7 +26,7 @@ if(NOT TARGET pmm)
     FetchContent_Declare(
         pmm
         GIT_REPOSITORY https://github.com/netkeep80/PersistMemoryManager.git
-        GIT_TAG        e4e20058ed0f45bd463ef74a38e44c169effbbc9
+        GIT_TAG        fea60cadecb838ddfc068f23e97dd02d9502a93d
     )
     FetchContent_MakeAvailable(pmm)
 
