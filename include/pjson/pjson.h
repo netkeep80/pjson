@@ -6,3 +6,4 @@
 #include "pjson/node.h"
 #include "pjson/scalar.h"
 #include "pjson/string_binary.h"
+#include "pjson/array.h"
