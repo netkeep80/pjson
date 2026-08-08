@@ -5,7 +5,11 @@ project(pjson VERSION 0.1.0 LANGUAGES CXX)
 include(FetchContent)
 
 # @req CR-001 — pjson uses PersistMemoryManager as its persistent-storage dependency.
-# Keep PMM pinned so pjson builds are reproducible and do not silently track main.
+# Keep PMM pinned to the immutable revision that provides application-defined
+# NodeType metadata required by FR-009/FR-014. Do not silently track main.
+# A commit SHA is intentionally fetched without GIT_SHALLOW: unlike a branch or
+# tag it may later sit below the remote tip, and a depth-1 clone is not a stable
+# way to guarantee that exact object remains available to FetchContent.
 if(NOT TARGET pmm)
     set(_pjson_saved_build_testing "${BUILD_TESTING}")
     set(_pjson_saved_pmm_build_examples "${PMM_BUILD_EXAMPLES}")
@@ -20,8 +24,7 @@ if(NOT TARGET pmm)
     FetchContent_Declare(
         pmm
         GIT_REPOSITORY https://github.com/netkeep80/PersistMemoryManager.git
-        GIT_TAG        v6.2.2
-        GIT_SHALLOW    TRUE
+        GIT_TAG        25a0e7cc3557788cd2cee65cb2f1f00c4493a465
     )
     FetchContent_MakeAvailable(pmm)
 
