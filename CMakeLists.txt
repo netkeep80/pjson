@@ -5,8 +5,9 @@ project(pjson VERSION 0.1.0 LANGUAGES CXX)
 include(FetchContent)
 
 # @req CR-001 — pjson uses PersistMemoryManager as its persistent-storage dependency.
-# Keep PMM pinned to the immutable revision that provides application-defined
-# NodeType metadata required by FR-009/FR-014. Do not silently track main.
+# Keep PMM pinned to the immutable revision that provides the storage contracts
+# required by the active pjson phase. Do not silently track main. Phase C1 is
+# pinned to the immutable merge commit that landed relocation-safe PMM #409.
 # A commit SHA is intentionally fetched without GIT_SHALLOW: unlike a branch or
 # tag it may later sit below the remote tip, and a depth-1 clone is not a stable
 # way to guarantee that exact object remains available to FetchContent.
@@ -24,7 +25,7 @@ if(NOT TARGET pmm)
     FetchContent_Declare(
         pmm
         GIT_REPOSITORY https://github.com/netkeep80/PersistMemoryManager.git
-        GIT_TAG        25a0e7cc3557788cd2cee65cb2f1f00c4493a465
+        GIT_TAG        83b6b18fb2b1138f70644b12e941d7d85f62a846
     )
     FetchContent_MakeAvailable(pmm)
 
@@ -43,15 +44,8 @@ target_include_directories(pjson INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(pjson INTERFACE pmm)
 
-set(_pjson_build_tests_default OFF)
-if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
-    set(_pjson_build_tests_default ON)
-endif()
-option(PJSON_BUILD_TESTS "Build pjson tests" ${_pjson_build_tests_default})
-
-if(PJSON_BUILD_TESTS)
+if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()

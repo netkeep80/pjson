@@ -5,3 +5,4 @@
 #include "pjson/manager.h"
 #include "pjson/node.h"
 #include "pjson/scalar.h"
+#include "pjson/string_binary.h"
