@@ -18,6 +18,15 @@ constexpr bool is_scalar_type( node_type type ) noexcept
            raw <= static_cast<std::uint8_t>( node_type::real_value );
 }
 
+static_assert( static_cast<std::uint8_t>( node_type::boolean_value ) ==
+               static_cast<std::uint8_t>( node_type::null_value ) + 1 );
+static_assert( static_cast<std::uint8_t>( node_type::signed_integer ) ==
+               static_cast<std::uint8_t>( node_type::null_value ) + 2 );
+static_assert( static_cast<std::uint8_t>( node_type::unsigned_integer ) ==
+               static_cast<std::uint8_t>( node_type::null_value ) + 3 );
+static_assert( static_cast<std::uint8_t>( node_type::real_value ) ==
+               static_cast<std::uint8_t>( node_type::null_value ) + 4 );
+
 template <typename Manager>
 bool has_type( node_ref<Manager> node, node_type expected ) noexcept
 {
