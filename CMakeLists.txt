@@ -26,7 +26,7 @@ if(NOT TARGET pmm)
     FetchContent_Declare(
         pmm
         GIT_REPOSITORY https://github.com/netkeep80/PersistMemoryManager.git
-        GIT_TAG        61ed8d6835b7a692f9cebfd0079079fef705b3bc
+        GIT_TAG        e4e20058ed0f45bd463ef74a38e44c169effbbc9
     )
     FetchContent_MakeAvailable(pmm)
 
@@ -45,15 +45,8 @@ target_include_directories(pjson INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(pjson INTERFACE pmm)
 
-set(_pjson_build_tests_default OFF)
-if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
-    set(_pjson_build_tests_default ON)
-endif()
-option(PJSON_BUILD_TESTS "Build pjson tests" ${_pjson_build_tests_default})
-
-if(PJSON_BUILD_TESTS)
+if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()
